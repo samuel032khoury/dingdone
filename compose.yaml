@@ -1,0 +1,23 @@
+services:
+  dingdone-db:
+    image: postgres:latest
+    container_name: dingdone-db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dingdonedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - dingdone-data:/var/lib/postgresql:rw
+    networks:
+      - dingdone-network
+
+networks:
+  dingdone-network:
+    name: dingdone-network
+    driver: bridge
+
+volumes:
+  dingdone-data:
+    name: dingdone-data
