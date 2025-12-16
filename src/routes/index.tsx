@@ -1,7 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { ListTodoIcon, PlusIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@/components/ui/empty";
 import { db } from "@/db";
 
 const serverLoader = createServerFn({ method: "GET" }).handler(() => {
@@ -31,11 +40,43 @@ function App() {
 					)}
 				</div>
 				<div>
-					<Button>
-						<Link to="/"></Link>
+					<Button size={"sm"} asChild>
+						<Link to="/todos/new">
+							<PlusIcon />
+							Add Todo
+						</Link>
 					</Button>
 				</div>
 			</div>
+			<TodoListTable todos={todos} />
 		</div>
 	);
+}
+
+function TodoListTable({
+	todos,
+}: {
+	todos: { id: string; name: string; isComplete: boolean; createdAt: Date }[];
+}) {
+	if (todos.length === 0) {
+		return (
+			<Empty className="border border-dashed">
+				<EmptyHeader>
+					<EmptyMedia variant={"icon"}>
+						<ListTodoIcon />
+					</EmptyMedia>
+				</EmptyHeader>
+				<EmptyTitle>No todos yet</EmptyTitle>
+				<EmptyDescription>Get started by adding a new todo.</EmptyDescription>
+				<EmptyContent>
+					<Button asChild>
+						<Link to="/todos/new">
+							<PlusIcon />
+							Add Todo
+						</Link>
+					</Button>
+				</EmptyContent>
+			</Empty>
+		);
+	}
 }
