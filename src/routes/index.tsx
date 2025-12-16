@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { EditIcon, ListTodoIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { startTransition, useState } from "react";
 import z from "zod";
 import { ActionButton } from "@/components/ui/action-button";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,20 @@ function formatDate(date: Date) {
 	return formatter.format(date);
 }
 
+const toggleTodoComplete = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			id: z.string().min(1),
+			isComplete: z.boolean(),
+		}),
+	)
+	.handler(async ({ data }) => {
+		await db
+			.update(todos)
+			.set({ isComplete: data.isComplete })
+			.where(eq(todos.id, data.id));
+	});
+
 const deleteTodo = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
@@ -97,16 +112,30 @@ function TodoTableRow({
 	createdAt: Date;
 }) {
 	const deleteTodoFn = useServerFn(deleteTodo);
+	const toggleTodoCompleteFn = useServerFn(toggleTodoComplete);
+	const [isCompleteState, setIsCompleteState] = useState(isComplete);
 	const router = useRouter();
 	return (
-		<TableRow>
+		<TableRow
+			onClick={(e) => {
+				const target = e.target as HTMLElement;
+				if (target.closest("[data-actions]")) return;
+				setIsCompleteState((c) => !c);
+				startTransition(async () => {
+					await toggleTodoCompleteFn({
+						data: { id, isComplete: !isCompleteState },
+					});
+					router.invalidate();
+				});
+			}}
+		>
 			<TableCell>
-				<Checkbox checked={isComplete} />
+				<Checkbox checked={isCompleteState} />
 			</TableCell>
 			<TableCell
 				className={cn(
 					"font-medium",
-					isComplete && "text-muted-foreground line-through",
+					isCompleteState && "text-muted-foreground line-through",
 				)}
 			>
 				{name}
@@ -114,7 +143,7 @@ function TodoTableRow({
 			<TableCell className="text-sm text-muted-foreground">
 				{formatDate(createdAt)}
 			</TableCell>
-			<TableCell>
+			<TableCell data-actions>
 				<div className="flex items-center justify-end gap-1">
 					<Button variant={"ghost"} size={"icon-sm"} asChild>
 						<Link to="/todos/$id/edit" params={{ id }}>
