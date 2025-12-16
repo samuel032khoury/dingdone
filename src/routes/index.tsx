@@ -1,6 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createServerFn, useServerFn } from "@tanstack/react-start";
+import { eq } from "drizzle-orm";
 import { EditIcon, ListTodoIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import z from "zod";
+import { ActionButton } from "@/components/ui/action-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +24,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { db } from "@/db";
+import { todos } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
 const serverLoader = createServerFn({ method: "GET" }).handler(() => {
@@ -70,6 +74,17 @@ function formatDate(date: Date) {
 	return formatter.format(date);
 }
 
+const deleteTodo = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			id: z.string().min(1),
+		}),
+	)
+	.handler(async ({ data }) => {
+		await db.delete(todos).where(eq(todos.id, data.id));
+		return { error: false };
+	});
+
 function TodoTableRow({
 	id,
 	name,
@@ -81,6 +96,8 @@ function TodoTableRow({
 	isComplete: boolean;
 	createdAt: Date;
 }) {
+	const deleteTodoFn = useServerFn(deleteTodo);
+	const router = useRouter();
 	return (
 		<TableRow>
 			<TableCell>
@@ -104,9 +121,17 @@ function TodoTableRow({
 							<EditIcon />
 						</Link>
 					</Button>
-					<Button variant={"destructiveGhost"} size={"icon-sm"}>
+					<ActionButton
+						action={async () => {
+							const res = await deleteTodoFn({ data: { id } });
+							router.invalidate();
+							return res;
+						}}
+						variant={"destructiveGhost"}
+						size={"icon-sm"}
+					>
 						<Trash2Icon />
-					</Button>
+					</ActionButton>
 				</div>
 			</TableCell>
 		</TableRow>
